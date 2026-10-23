@@ -75,7 +75,15 @@ impl GBEmulator {
                 self.divider = 0;
                 self.mem[addr] = 0;
             },
-            0xFF05 ..= 0xFF45 => { self.mem[addr] = value },
+            0xFF05 ..= 0xFF3F => { self.mem[addr] = value },
+            0xFF40 => {
+                if self.mem[addr] & 0x80 == 0 && value & 0x80 != 0 {
+                    self.gpu_frame_cycles = 452;
+                    self.mem[0xFF44] = 0;
+                }
+                self.mem[addr] = value;
+            },
+            0xFF41 ..= 0xFF45 => { self.mem[addr] = value },
             0xFF46            => { self.dma_transfer(value) },
             0xFF47 ..= 0xFF4F => { self.mem[addr] = value },
             0xFF50            => { self.in_bios = false },

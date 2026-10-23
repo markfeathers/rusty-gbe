@@ -55,7 +55,6 @@ impl GBEmulator {
             (0x8800, true)
         };
 
-        assert!(!signed);
 
         let bg_offset = if draw_window {
             if lcdc & (1 << 3) != 0 {
@@ -87,7 +86,11 @@ impl GBEmulator {
             let tile_col = xpos / 8;
             let tile_addr: u16 = (bg_offset + tile_row + tile_col) as u16;
             let tile_num = self.mmu_read8(tile_addr) as u16;
-            let tile_location: u16 = tile_offset + (tile_num * 16);
+            let tile_location = if signed {
+                (0x9000i32 + tile_num as u8 as i8 as i32 * 16) as u16
+            } else {
+                tile_offset + tile_num * 16
+            };
             let line = ((ypos as u16) % 8) * 2;
 
             let byte0 =  self.mmu_read8(tile_location + line);
@@ -95,20 +98,21 @@ impl GBEmulator {
 
             let bit = 7 - (xpos as u8) % 8;
 
-            let mut value = (byte0 & bit) >> bit;
-            value |= ((byte1 & bit) >> bit) << 1;
+            let mut value = (byte0 >> bit) & 1;
+            value |= ((byte1 >> bit) & 1) << 1;
 
             let bgp = self.mmu_read8(BGP);
 
             let pixel_color = self.get_color_from_palette(value, bgp);
             
             //println!("ly {}, pixel {}", ly, pixel);
-            let pixel_offset = ((144 * (ly as usize)) + pixel) * 4;
+            let pixel_offset = ((160 * (ly as usize)) + pixel) * 4;
 
             //println!("pixel_offset {}", pixel_offset);
             self.framebuffer[pixel_offset] = pixel_color[0];
             self.framebuffer[pixel_offset + 1] = pixel_color[1];
             self.framebuffer[pixel_offset + 2] = pixel_color[2];
+            self.framebuffer[pixel_offset + 3] = 255;
         }
     }
 
@@ -123,51 +127,42 @@ impl GBEmulator {
         }
     }
 
-    pub fn gpu_run(&mut self, cycles: u32) {
-        let lcdc = self.mmu_read8(LCDC);
-        if lcdc & (1 << 7) == 0 { /* LCD Off */
+    pub fn gpu_run(&mut self, mut cycles: u32) {
+        if self.mem[LCDC as usize] & 0x80 == 0 {
             self.gpu_frame_cycles = GPU_CYCLES_PER_FRAME;
-            self.mmu_write8(LY, 0x0);
-            self.mmu_write8(STAT,0x1);
+            self.mem[LY as usize] = 0;
+            self.mem[STAT as usize] &= !3;
             return;
         }
-
-        self.set_lcd_stat();
-
-        let (result, overflow) = self.gpu_frame_cycles.overflowing_sub(cycles);
-        if overflow {
-            self.gpu_frame_cycles = 0;
-            let mut ly = self.mmu_read8(LY);
-            ly += 1;
-            self.gpu_frame_cycles = GPU_CYCLES_PER_FRAME;
-
-            if ly == VBLANK_SCANLINE {
-                self.request_irq(0);
-            } else if ly > VBLANK_SCANLINE_MAX {
-                ly = 0;
-            } else {
+        while cycles >= self.gpu_frame_cycles {
+            cycles -= self.gpu_frame_cycles;
+            let ly = self.mem[LY as usize];
+            if ly < VBLANK_SCANLINE {
                 self.draw_scanline();
             }
-
-            self.mmu_write8(LY, ly);
-
-        } else {
-            self.gpu_frame_cycles = result;
+            let next = if ly == VBLANK_SCANLINE_MAX { 0 } else { ly + 1 };
+            self.mem[LY as usize] = next;
+            if next == VBLANK_SCANLINE {
+                self.request_irq(0);
+            }
+            self.gpu_frame_cycles = GPU_CYCLES_PER_FRAME;
         }
+        self.gpu_frame_cycles -= cycles;
+        self.set_lcd_stat();
     }
 
     fn set_lcd_stat(&mut self) {
         let mut lcd_status = self.mmu_read8(STAT);
         let lcdc = self.mmu_read8(LCDC);
-        let current_mode = lcdc & 0x3;
+        let current_mode = lcd_status & 0x3;
         let ly = self.mmu_read8(LY);
 
         /* Check LCD Status mode, if we are entering
          * a new mode with an IRQ enabled, request it */
-        if ly > VBLANK_SCANLINE {
+        if ly >= VBLANK_SCANLINE {
             /* VBLANK mode */
             if current_mode != 1  {
-                lcd_status = (lcd_status & 0x3) | 0x1;
+                lcd_status = (lcd_status & !0x3) | 0x1;
                 if (current_mode != 1) && (lcd_status & (1 << 4) != 0) {
                     self.request_irq(1);
                 }
@@ -178,16 +173,16 @@ impl GBEmulator {
 
             if self.gpu_frame_cycles >= MODE2_START {
                 /* OAM */
-                lcd_status = (lcd_status & 0x3) | 0x2;
+                lcd_status = (lcd_status & !0x3) | 0x2;
                 if current_mode != 2 && (lcd_status & (1 << 5) != 0) {
                     self.request_irq(1);
                 }
             } else if self.gpu_frame_cycles > MODE3_START {
                 /* LCD */
-                lcd_status = (lcd_status & 0x3) | 0x3;
+                lcd_status = (lcd_status & !0x3) | 0x3;
             } else {
                 /* HBLANK */
-                lcd_status = lcd_status & 0x3;
+                lcd_status &= !0x3;
                 if current_mode != 3 && (lcd_status & (1 << 3) != 0) {
                     self.request_irq(1);
                 }

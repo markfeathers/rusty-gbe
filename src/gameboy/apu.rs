@@ -154,6 +154,15 @@ impl GBEmulator {
             }
             self.apu.length_enabled[channel] = enabled;
             if value & 0x80 != 0 {
+                if channel == 2 && self.apu.enabled[2] && self.apu.wave_timer == 2 {
+                    let offset = ((self.apu.wave_position as usize + 1) / 2) & 15;
+                    if offset < 4 {
+                        self.mem[0xFF30] = self.mem[0xFF30 + offset];
+                    } else {
+                        let start = 0xFF30 + (offset & !3);
+                        self.mem.copy_within(start..start + 4, 0xFF30);
+                    }
+                }
                 let dac_addr = [0xFF12, 0xFF17, 0xFF1A, 0xFF21][channel];
                 let mask = if channel == 2 { 0x80 } else { 0xF8 };
                 self.apu.enabled[channel] = self.mem[dac_addr] & mask != 0;

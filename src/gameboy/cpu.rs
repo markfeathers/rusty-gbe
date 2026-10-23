@@ -1971,7 +1971,6 @@ impl GBEmulator {
     fn add_u16(&mut self, value1: u16, value2: u16) -> u16 {
         let (result, overflow) = value1.overflowing_add(value2);
         self.regs.flags.negative = false;
-        self.regs.flags.zero = false;
         self.regs.flags.carry = overflow;
         self.regs.flags.half_carry = (value1 & 0xfff) + (value2 & 0xfff) > 0xfff;
 

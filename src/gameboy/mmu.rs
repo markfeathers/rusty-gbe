@@ -34,6 +34,7 @@ impl GBEmulator {
             0xFEA0 ..= 0xFEFF => { 0x0 },
             /* IO Ports */
             0xFF0F => self.mem[addr] | 0xE0,
+            0xFF10 ..= 0xFF3F => self.apu_read8(addr),
             0xFF00 ..= 0xFF7F => { self.mem[addr] },
             /* High RAM (HRAM) */
             0xFF80 ..= 0xFFFE => { self.mem[addr] },
@@ -75,7 +76,8 @@ impl GBEmulator {
                 self.divider = 0;
                 self.mem[addr] = 0;
             },
-            0xFF05 ..= 0xFF3F => { self.mem[addr] = value },
+            0xFF05 ..= 0xFF0F => { self.mem[addr] = value },
+            0xFF10 ..= 0xFF3F => self.apu_write8(addr, value),
             0xFF40 => {
                 if self.mem[addr] & 0x80 == 0 && value & 0x80 != 0 {
                     self.gpu_frame_cycles = 452;

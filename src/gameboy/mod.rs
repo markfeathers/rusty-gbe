@@ -8,6 +8,7 @@ mod mmu;
 mod gpu;
 mod interrupts;
 mod timers;
+mod apu;
 
 /* 
  * https://gbdev.io/gb-opcodes/optables/
@@ -36,6 +37,7 @@ pub struct GBEmulator {
     interrupts_en: bool,
     divider: u16,
     cpu_cycles: u32,
+    apu: apu::Apu,
     pub frame_hz: u32,
     gpu_frame_cycles: u32,
     pub framebuffer: [u8; 160*144*4], /* RGB for each pixel */
@@ -58,6 +60,7 @@ impl GBEmulator {
             interrupts_en: false,
             divider: 0,
             cpu_cycles: 0,
+            apu: apu::Apu::default(),
             frame_hz: 60,
             gpu_frame_cycles: 456,
             framebuffer: [0; 160*144*4],

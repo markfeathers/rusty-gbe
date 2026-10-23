@@ -1685,14 +1685,10 @@ impl GBEmulator {
             0xDD => {
                 panic!("0xDD is not a valid instruction. PC: {:#06X}", self.regs.pc);
             }
-            0xDE => { /* CALL C, A16  */
-                let addr = self.pc_read16();
-                if self.regs.flags.carry {
-                    self.call(addr);
-                    24
-                } else {
-                    12
-                }
+            0xDE => { /* SBC A, d8 */
+                let value = self.pc_read8();
+                self.regs.a = self.sbc(value);
+                8
             },
             0xDF => { /* RST 18H */
                 self.stack_push(self.regs.pc);

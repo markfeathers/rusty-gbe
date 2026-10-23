@@ -3,9 +3,6 @@ use super::GBEmulator;
 
 impl GBEmulator {
     pub fn cpu_run_op(&mut self) -> u32 {
-        if self.regs.pc > 0x100 {
-            self.debug = true;
-        } 
         //self.debug = true;
         if self.debug {
             self.dump_regs();

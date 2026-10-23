@@ -2062,7 +2062,7 @@ impl GBEmulator {
         self.regs.flags.carry = value & 0x1 != 0;
         let mut result = value >> 1;
         if carry {
-            result |= 0x1;
+            result |= 0x80;
         }
         self.regs.flags.zero = value == 0;
         self.regs.flags.negative = false;

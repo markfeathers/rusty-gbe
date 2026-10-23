@@ -1734,9 +1734,14 @@ impl GBEmulator {
                 self.regs.pc = 0x20;
                 16
             },
-            0xE8 => {
+            0xE8 => { /* ADD SP, r8 */
                 let value = self.pc_read8();
-                self.regs.sp = self.add_u16(self.regs.sp, value as u16);
+                let sp = self.regs.sp;
+                self.regs.sp = sp.wrapping_add(value as i8 as i16 as u16);
+                self.regs.flags.zero = false;
+                self.regs.flags.negative = false;
+                self.regs.flags.half_carry = (sp & 0x0F) + (value as u16 & 0x0F) > 0x0F;
+                self.regs.flags.carry = (sp & 0xFF) + value as u16 > 0xFF;
                 16
             },
             0xE9 => { /* JP HL */

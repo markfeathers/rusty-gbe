@@ -954,6 +954,76 @@ impl GBEmulator {
             0xCB => { /* Prefix */
                 let prefix_op = self.pc_read8();
                 let prefix_op_clocks: u32 = match prefix_op {
+                    0x00 => { /* RLC B */
+                        self.regs.b = self.rotate_left(self.regs.b);
+                        8
+                    },
+                    0x01 => { /* RLC C */
+                        self.regs.c = self.rotate_left(self.regs.c);
+                        8
+                    },
+                    0x02 => { /* RLC D */
+                        self.regs.d = self.rotate_left(self.regs.d);
+                        8
+                    },
+                    0x03 => { /* RLC E */
+                        self.regs.e = self.rotate_left(self.regs.e);
+                        8
+                    },
+                    0x04 => { /* RLC H */
+                        self.regs.h = self.rotate_left(self.regs.h);
+                        8
+                    },
+                    0x05 => { /* RLC L */
+                        self.regs.l = self.rotate_left(self.regs.l);
+                        8
+                    },
+                    0x06 => { /* RLC (HL) */
+                        let addr = self.regs.get_hl();
+                        let value = self.mmu_read8(addr);
+                        let result = self.rotate_left(value);
+                        self.mmu_write8(addr, result);
+                        16
+                    },
+                    0x07 => { /* RLC A */
+                        self.regs.a = self.rotate_left(self.regs.a);
+                        8
+                    },
+                    0x08 => { /* RRC B */
+                        self.regs.b = self.rotate_right(self.regs.b);
+                        8
+                    },
+                    0x09 => { /* RRC C */
+                        self.regs.c = self.rotate_right(self.regs.c);
+                        8
+                    },
+                    0x0A => { /* RRC D */
+                        self.regs.d = self.rotate_right(self.regs.d);
+                        8
+                    },
+                    0x0B => { /* RRC E */
+                        self.regs.e = self.rotate_right(self.regs.e);
+                        8
+                    },
+                    0x0C => { /* RRC H */
+                        self.regs.h = self.rotate_right(self.regs.h);
+                        8
+                    },
+                    0x0D => { /* RRC L */
+                        self.regs.l = self.rotate_right(self.regs.l);
+                        8
+                    },
+                    0x0E => { /* RRC (HL) */
+                        let addr = self.regs.get_hl();
+                        let value = self.mmu_read8(addr);
+                        let result = self.rotate_right(value);
+                        self.mmu_write8(addr, result);
+                        16
+                    },
+                    0x0F => { /* RRC A */
+                        self.regs.a = self.rotate_right(self.regs.a);
+                        8
+                    },
                     0x10 => { /* RL B */
                         self.regs.b = self.rotate_left_carry(self.regs.b);
                         8

@@ -7,6 +7,10 @@ pub(super) struct Apu {
     length: [u16; 4],
     length_enabled: [bool; 4],
     step: u8,
+    sweep_frequency: u16,
+    sweep_timer: u8,
+    sweep_enabled: bool,
+    sweep_negated: bool,
 }
 
 impl GBEmulator {
@@ -24,7 +28,35 @@ impl GBEmulator {
                 if self.apu.length_enabled[channel] { self.apu_clock_length(channel); }
             }
         }
+        if self.apu.step == 2 || self.apu.step == 6 {
+            if self.apu.sweep_timer > 0 { self.apu.sweep_timer -= 1; }
+            if self.apu.sweep_timer == 0 {
+                let period = (self.mem[0xFF10] >> 4) & 7;
+                self.apu.sweep_timer = if period == 0 { 8 } else { period };
+                if self.apu.sweep_enabled && period != 0 {
+                    let frequency = self.apu_sweep_calculate();
+                    if frequency <= 2047 && self.mem[0xFF10] & 7 != 0 {
+                        self.apu.sweep_frequency = frequency;
+                        self.mem[0xFF13] = frequency as u8;
+                        self.mem[0xFF14] = (self.mem[0xFF14] & !7) | (frequency >> 8) as u8;
+                        self.apu_sweep_calculate();
+                    }
+                }
+            }
+        }
         self.apu.step = (self.apu.step + 1) & 7;
+    }
+
+    fn apu_sweep_calculate(&mut self) -> u16 {
+        let delta = self.apu.sweep_frequency >> (self.mem[0xFF10] & 7);
+        let frequency = if self.mem[0xFF10] & 8 != 0 {
+            self.apu.sweep_negated = true;
+            self.apu.sweep_frequency - delta
+        } else {
+            self.apu.sweep_frequency + delta
+        };
+        if frequency > 2047 { self.apu.enabled[0] = false; }
+        frequency
     }
 
     pub(super) fn apu_read8(&self, addr: usize) -> u8 {
@@ -75,6 +107,9 @@ impl GBEmulator {
         if !self.apu.powered {
             return;
         }
+        if addr == 0xFF10 && self.apu.sweep_negated && value & 8 == 0 {
+            self.apu.enabled[0] = false;
+        }
         self.mem[addr] = value;
         let dac_channel = match addr {
             0xFF12 => Some(0), 0xFF17 => Some(1),
@@ -99,6 +134,14 @@ impl GBEmulator {
                 let dac_addr = [0xFF12, 0xFF17, 0xFF1A, 0xFF21][channel];
                 let mask = if channel == 2 { 0x80 } else { 0xF8 };
                 self.apu.enabled[channel] = self.mem[dac_addr] & mask != 0;
+                if channel == 0 {
+                    self.apu.sweep_frequency = self.mem[0xFF13] as u16 | ((value as u16 & 7) << 8);
+                    let period = (self.mem[0xFF10] >> 4) & 7;
+                    self.apu.sweep_timer = if period == 0 { 8 } else { period };
+                    self.apu.sweep_enabled = self.mem[0xFF10] & 0x77 != 0;
+                    self.apu.sweep_negated = false;
+                    if self.mem[0xFF10] & 7 != 0 { self.apu_sweep_calculate(); }
+                }
                 if self.apu.length[channel] == 0 {
                     self.apu.length[channel] = if channel == 2 { 256 } else { 64 };
                     if enabled && extra_clock { self.apu_clock_length(channel); }

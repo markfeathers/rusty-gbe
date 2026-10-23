@@ -585,8 +585,8 @@ impl GBEmulator {
                 self.regs.a = self.regs.b;
                 4
             },
-            0x79 => { /* LD A, B */
-                self.regs.a = self.regs.b;
+            0x79 => { /* LD A, C */
+                self.regs.a = self.regs.c;
                 4
             },
             0x7A => { /* LD A, D */

@@ -1814,8 +1814,8 @@ impl GBEmulator {
 
                 12
             },
-            0xF9 => { /* LD HL, SP */
-                self.regs.set_hl(self.regs.sp);
+            0xF9 => { /* LD SP, HL */
+                self.regs.sp = self.regs.get_hl();
                 8
             },
             0xFA => { /* LD A, (a16) */

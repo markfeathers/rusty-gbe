@@ -59,8 +59,6 @@ fn main() {
 
     loop {
         let cycles = gb.cpu_run_op();
-        gb.gpu_run(cycles);
-        gb.timers_run(cycles);
         gb.handle_irqs();
         /*if gb.regs.pc == 0x8E {
             break;
@@ -107,8 +105,6 @@ fn main() {
        /* let mut framecycles = 0;
         while framecycles < 70224 {
             let cycles = gb.cpu_run_op();
-            gb.gpu_run(cycles);
-            gb.timers_run(cycles);
             gb.handle_irqs();
             
             framecycles += cycles;

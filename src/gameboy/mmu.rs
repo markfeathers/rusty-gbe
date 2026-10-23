@@ -95,15 +95,40 @@ impl GBEmulator {
         self.mmu_write8(addr + 1, (value >> 8) as u8);
     }
 
+    pub(super) fn advance_cycles(&mut self, cycles: u32) {
+        self.cpu_cycles += cycles;
+        self.timers_run(cycles);
+        self.gpu_run(cycles);
+    }
+
+    pub(super) fn cpu_read8(&mut self, addr: u16) -> u8 {
+        self.advance_cycles(4);
+        self.mmu_read8(addr)
+    }
+
+    pub(super) fn cpu_write8(&mut self, addr: u16, value: u8) {
+        self.advance_cycles(4);
+        self.mmu_write8(addr, value);
+    }
+
+    pub(super) fn cpu_read16(&mut self, addr: u16) -> u16 {
+        let low = self.cpu_read8(addr) as u16;
+        low | ((self.cpu_read8(addr.wrapping_add(1)) as u16) << 8)
+    }
+
+    pub(super) fn cpu_write16(&mut self, addr: u16, value: u16) {
+        self.cpu_write8(addr, value as u8);
+        self.cpu_write8(addr.wrapping_add(1), (value >> 8) as u8);
+    }
+
     pub fn pc_read8(&mut self) -> u8 {
-        let val = self.mmu_read8(self.regs.pc);
-        self.regs.pc += 1;
+        let val = self.cpu_read8(self.regs.pc);
+        self.regs.pc = self.regs.pc.wrapping_add(1);
         val
     }
 
     pub fn pc_read16(&mut self) -> u16 {
-        let val = self.mmu_read16(self.regs.pc);
-        self.regs.pc += 2;
-        val
+        let low = self.pc_read8() as u16;
+        low | ((self.pc_read8() as u16) << 8)
     }
 }

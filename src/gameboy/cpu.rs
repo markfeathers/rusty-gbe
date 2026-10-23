@@ -3,7 +3,9 @@ use super::GBEmulator;
 
 impl GBEmulator {
     pub fn cpu_run_op(&mut self) -> u32 {
+        self.cpu_cycles = 0;
         if self.halted {
+            self.advance_cycles(4);
             return 4;
         }
         //self.debug = true;
@@ -28,7 +30,7 @@ impl GBEmulator {
                 12
             },
             0x02 => { /* LD (BC), A */
-                self.mmu_write8(self.regs.get_bc(), self.regs.a);
+                self.cpu_write8(self.regs.get_bc(), self.regs.a);
                 8
             },
             0x03 => { /* INC BC */
@@ -55,7 +57,7 @@ impl GBEmulator {
             },
             0x08 => { /* LD (u16), SP */
                 let addr = self.pc_read16();
-                self.mmu_write16(addr, self.regs.sp);
+                self.cpu_write16(addr, self.regs.sp);
                 20
             },
             0x09 => { /* ADD HL, BC */
@@ -64,7 +66,7 @@ impl GBEmulator {
                 8
             },
             0x0A => { /* LD A, (BC) */
-                self.regs.a = self.mmu_read8(self.regs.get_bc());
+                self.regs.a = self.cpu_read8(self.regs.get_bc());
                 8
             },
             0x0B => { /* DEC BC */
@@ -102,7 +104,7 @@ impl GBEmulator {
                 12
             },
             0x12 => { /* LD (DE), A */
-                self.mmu_write8(self.regs.get_de(), self.regs.a);
+                self.cpu_write8(self.regs.get_de(), self.regs.a);
                 8
             }
             0x13 => { /* INC DE */
@@ -138,7 +140,7 @@ impl GBEmulator {
                 8
             },
             0x1A => { /* LD A, (DE) */
-                self.regs.a = self.mmu_read8(self.regs.get_de());
+                self.regs.a = self.cpu_read8(self.regs.get_de());
                 8
             },
             0x1B => { /* DEC DE */
@@ -179,7 +181,7 @@ impl GBEmulator {
             },
             0x22 => { /* LD (HL+), A */
                 let addr = self.regs.get_hl();
-                self.mmu_write8(addr, self.regs.a);
+                self.cpu_write8(addr, self.regs.a);
                 self.regs.set_hl(addr.wrapping_add(1));
                 8
             },
@@ -246,7 +248,7 @@ impl GBEmulator {
             },
             0x2A => { /* LD A, (HL+) */
                 let addr = self.regs.get_hl();
-                self.regs.a = self.mmu_read8(addr);
+                self.regs.a = self.cpu_read8(addr);
                 self.regs.set_hl(addr.wrapping_add(1));
                 8
             },
@@ -288,7 +290,7 @@ impl GBEmulator {
             },
             0x32 => { /* LD HL-, A */
                 let addr = self.regs.get_hl();
-                self.mmu_write8(addr, self.regs.a);
+                self.cpu_write8(addr, self.regs.a);
                 self.regs.set_hl(addr.wrapping_sub(1));
                 8
             },
@@ -299,20 +301,22 @@ impl GBEmulator {
             },
             0x34 => { /* INC (HL) */
                 let addr = self.regs.get_hl();
-                let result = self.increment_u8(self.mmu_read8(addr));
-                self.mmu_write8(addr, result);
+                let value = self.cpu_read8(addr);
+                let result = self.increment_u8(value);
+                self.cpu_write8(addr, result);
                 12
             },
             0x35 => { /* DEC (HL) */
                 let addr = self.regs.get_hl();
-                let result = self.decrement_u8(self.mmu_read8(addr));
-                self.mmu_write8(addr, result);
+                let value = self.cpu_read8(addr);
+                let result = self.decrement_u8(value);
+                self.cpu_write8(addr, result);
                 12
             },
             0x36 => { /* LD (HL), d8 */
                 let addr = self.regs.get_hl();
                 let value = self.pc_read8();
-                self.mmu_write8(addr, value);
+                self.cpu_write8(addr, value);
                 12
             },
             0x37 => { /* SCF */
@@ -337,7 +341,7 @@ impl GBEmulator {
             },
             0x3A => { /* LD A, (HL-) */
                 let addr = self.regs.get_hl();
-                self.regs.a = self.mmu_read8(addr);
+                self.regs.a = self.cpu_read8(addr);
                 self.regs.set_hl(addr.wrapping_sub(1));
                 8
             },
@@ -389,7 +393,7 @@ impl GBEmulator {
                 4
             },
             0x46 => { /* LD B, HL */
-                self.regs.b = self.mmu_read8(self.regs.get_hl());
+                self.regs.b = self.cpu_read8(self.regs.get_hl());
                 8
             },
             0x47 => { /* LD B, A */
@@ -422,7 +426,7 @@ impl GBEmulator {
                 4
             },
             0x4E => { /* LD B, HL */
-                self.regs.c = self.mmu_read8(self.regs.get_hl());
+                self.regs.c = self.cpu_read8(self.regs.get_hl());
                 8
             },
             0x4F => { /* LD C, L */
@@ -454,7 +458,7 @@ impl GBEmulator {
                 4
             },
             0x56 => { /* LD D, HL */
-                self.regs.d = self.mmu_read8(self.regs.get_hl());
+                self.regs.d = self.cpu_read8(self.regs.get_hl());
                 8
             },
             0x57 => { /* LD D, A */
@@ -486,7 +490,7 @@ impl GBEmulator {
                 4
             },
             0x5E => { /* LD E, HL */
-                self.regs.e = self.mmu_read8(self.regs.get_hl());
+                self.regs.e = self.cpu_read8(self.regs.get_hl());
                 8
             },
             0x5F => { /* LD E, A */
@@ -518,7 +522,7 @@ impl GBEmulator {
                 4
             },
             0x66 => { /* LD H, HL */
-                self.regs.h = self.mmu_read8(self.regs.get_hl());
+                self.regs.h = self.cpu_read8(self.regs.get_hl());
                 8
             },
             0x67 => { /* LD H, A */
@@ -550,7 +554,7 @@ impl GBEmulator {
                 4
             },
             0x6E => { /* LD L, HL */
-                self.regs.l = self.mmu_read8(self.regs.get_hl());
+                self.regs.l = self.cpu_read8(self.regs.get_hl());
                 8
             },
             0x6F => { /* LD L, A */
@@ -558,27 +562,27 @@ impl GBEmulator {
                 4
             },
             0x70 => { /* LD (HL), B */
-                self.mmu_write8(self.regs.get_hl(), self.regs.b);
+                self.cpu_write8(self.regs.get_hl(), self.regs.b);
                 8
             },
             0x71 => { /* LD (HL), C */
-                self.mmu_write8(self.regs.get_hl(), self.regs.c);
+                self.cpu_write8(self.regs.get_hl(), self.regs.c);
                 8
             },
             0x72 => { /* LD (HL), D */
-                self.mmu_write8(self.regs.get_hl(), self.regs.d);
+                self.cpu_write8(self.regs.get_hl(), self.regs.d);
                 8
             },
             0x73 => { /* LD (HL), E */
-                self.mmu_write8(self.regs.get_hl(), self.regs.e);
+                self.cpu_write8(self.regs.get_hl(), self.regs.e);
                 8
             },
             0x74 => { /* LD (HL), H */
-                self.mmu_write8(self.regs.get_hl(), self.regs.h);
+                self.cpu_write8(self.regs.get_hl(), self.regs.h);
                 8
             },
             0x75 => { /* LD (HL), L */
-                self.mmu_write8(self.regs.get_hl(), self.regs.l);
+                self.cpu_write8(self.regs.get_hl(), self.regs.l);
                 8
             },
             0x76 => { /* HALT */
@@ -586,7 +590,7 @@ impl GBEmulator {
                 4
             },
             0x77 => { /* LD (HL), A */
-                self.mmu_write8(self.regs.get_hl(), self.regs.a);
+                self.cpu_write8(self.regs.get_hl(), self.regs.a);
                 8
             },
             0x78 => { /* LD A, B */
@@ -614,7 +618,7 @@ impl GBEmulator {
                 4
             },
             0x7E => { /* LD A, HL */
-                self.regs.a = self.mmu_read8(self.regs.get_hl());
+                self.regs.a = self.cpu_read8(self.regs.get_hl());
                 8
             },
             0x7F => { /* LD A, A */
@@ -646,7 +650,7 @@ impl GBEmulator {
                 4
             },
             0x86 => { /* ADD A, (HL) */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.regs.a = self.add_u8(self.regs.a, value);
                 8
             },
@@ -679,7 +683,7 @@ impl GBEmulator {
                 4
             },
             0x8E => { /* ADC A, (HL) */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.regs.a = self.adc(value);
                 8
             },
@@ -712,7 +716,7 @@ impl GBEmulator {
                 4
             },
             0x96 => { /* SUB HL */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.regs.a = self.sub(value);
                 8
             },
@@ -746,7 +750,7 @@ impl GBEmulator {
                 4
             },
             0x9E => { /* SBC A, (HL) */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.regs.a = self.sbc(value);
                 8
             },
@@ -779,7 +783,7 @@ impl GBEmulator {
                 4
             },
             0xA6 => { /* AND (HL) */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.regs.a = self.and(value);
                 8
             },
@@ -812,7 +816,7 @@ impl GBEmulator {
                 4
             },
             0xAE => { /* XOR (HL) */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.regs.a = self.xor(value);
                 8
             },
@@ -845,7 +849,7 @@ impl GBEmulator {
                 4
             },
             0xB6 => { /* OR (HL) */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.regs.a = self.or(value);
                 8
             },
@@ -878,7 +882,7 @@ impl GBEmulator {
                 4
             },
             0xBE => { /* CP (HL) */
-                let value = self.mmu_read8(self.regs.get_hl());
+                let value = self.cpu_read8(self.regs.get_hl());
                 self.sub(value);
                 8
             },
@@ -909,7 +913,7 @@ impl GBEmulator {
                 }
             },
             0xC3 => { /* JP u16 */
-                self.regs.pc = self.mmu_read16(self.regs.pc);
+                self.regs.pc = self.cpu_read16(self.regs.pc);
                 16
             },
             0xC4 => { /* CALL NZ, u16 */
@@ -986,9 +990,9 @@ impl GBEmulator {
                     },
                     0x06 => { /* RLC (HL) */
                         let addr = self.regs.get_hl();
-                        let value = self.mmu_read8(addr);
+                        let value = self.cpu_read8(addr);
                         let result = self.rotate_left(value);
-                        self.mmu_write8(addr, result);
+                        self.cpu_write8(addr, result);
                         16
                     },
                     0x07 => { /* RLC A */
@@ -1021,9 +1025,9 @@ impl GBEmulator {
                     },
                     0x0E => { /* RRC (HL) */
                         let addr = self.regs.get_hl();
-                        let value = self.mmu_read8(addr);
+                        let value = self.cpu_read8(addr);
                         let result = self.rotate_right(value);
-                        self.mmu_write8(addr, result);
+                        self.cpu_write8(addr, result);
                         16
                     },
                     0x0F => { /* RRC A */
@@ -1055,9 +1059,9 @@ impl GBEmulator {
                         8
                     },
                     0x16 => { /* RL (HL) */
-                        let mut value = self.mmu_read8(self.regs.get_hl());
+                        let mut value = self.cpu_read8(self.regs.get_hl());
                         value = self.rotate_left_carry(value);
-                        self.mmu_write8(self.regs.get_hl(), value);
+                        self.cpu_write8(self.regs.get_hl(), value);
                         16
                     },
                     0x17 => { /* RL A */
@@ -1089,9 +1093,9 @@ impl GBEmulator {
                         8
                     },
                     0x1e => { /* RR (HL) */
-                        let mut value = self.mmu_read8(self.regs.get_hl());
+                        let mut value = self.cpu_read8(self.regs.get_hl());
                         value = self.rotate_right_carry(value);
-                        self.mmu_write8(self.regs.get_hl(), value);
+                        self.cpu_write8(self.regs.get_hl(), value);
                         16
                     },
                     0x1f => { /* RR A */
@@ -1123,9 +1127,9 @@ impl GBEmulator {
                         8
                     },
                     0x26 => { /* SLA (HL) */
-                        let mut value = self.mmu_read8(self.regs.get_hl());
+                        let mut value = self.cpu_read8(self.regs.get_hl());
                         value = self.sla(value);
-                        self.mmu_write8(self.regs.get_hl(), value);
+                        self.cpu_write8(self.regs.get_hl(), value);
                         16
                     },
                     0x27 => { /* SLA A */
@@ -1158,9 +1162,9 @@ impl GBEmulator {
                         8
                     },
                     0x2E => { /* SRA (HL) */
-                        let mut value = self.mmu_read8(self.regs.get_hl());
+                        let mut value = self.cpu_read8(self.regs.get_hl());
                         value = self.sra(value);
-                        self.mmu_write8(self.regs.get_hl(), value);
+                        self.cpu_write8(self.regs.get_hl(), value);
                         16
                     },
                     0x2F => { /* SRA A */
@@ -1193,9 +1197,9 @@ impl GBEmulator {
                         8
                     },
                     0x36 => { /* SWAP (HL) */
-                        let mut value = self.mmu_read8(self.regs.get_hl());
+                        let mut value = self.cpu_read8(self.regs.get_hl());
                         value = self.swap(value);
-                        self.mmu_write8(self.regs.get_hl(), value);
+                        self.cpu_write8(self.regs.get_hl(), value);
                         16
                     },
                     0x37 => { /* SWAP A */
@@ -1227,9 +1231,9 @@ impl GBEmulator {
                         8
                     },
                     0x3E => { /* SRL (HL) */
-                        let mut value = self.mmu_read8(self.regs.get_hl());
+                        let mut value = self.cpu_read8(self.regs.get_hl());
                         value = self.srl(value);
-                        self.mmu_write8(self.regs.get_hl(), value);
+                        self.cpu_write8(self.regs.get_hl(), value);
                         16
                     },
                     0x3F => { /* SRL A */
@@ -1261,7 +1265,7 @@ impl GBEmulator {
                         8
                     },
                     0x46 => { /* BIT 0, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 0);
                         12
                     },
@@ -1294,7 +1298,7 @@ impl GBEmulator {
                         8
                     },
                     0x4e => { /* BIT 1, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 1);
                         12
                     },
@@ -1327,7 +1331,7 @@ impl GBEmulator {
                         8
                     },
                     0x56 => { /* BIT 2, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 2);
                         12
                     },
@@ -1360,7 +1364,7 @@ impl GBEmulator {
                         8
                     },
                     0x5e => { /* BIT 3, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 3);
                         12
                     },
@@ -1393,7 +1397,7 @@ impl GBEmulator {
                         8
                     },
                     0x66 => { /* BIT 4, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 4);
                         12
                     },
@@ -1426,7 +1430,7 @@ impl GBEmulator {
                         8
                     },
                     0x6e => { /* BIT 5, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 5);
                         12
                     },
@@ -1459,7 +1463,7 @@ impl GBEmulator {
                         8
                     },
                     0x76 => { /* BIT 6, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 6);
                         12
                     },
@@ -1492,7 +1496,7 @@ impl GBEmulator {
                         8
                     },
                     0x7e => { /* BIT 7, (HL) */
-                        let value = self.mmu_read8(self.regs.get_hl());
+                        let value = self.cpu_read8(self.regs.get_hl());
                         self.bit(value, 7);
                         12
                     },
@@ -1510,7 +1514,7 @@ impl GBEmulator {
                             3 => self.regs.e,
                             4 => self.regs.h,
                             5 => self.regs.l,
-                            6 => self.mmu_read8(self.regs.get_hl()),
+                            6 => self.cpu_read8(self.regs.get_hl()),
                             _ => self.regs.a,
                         };
                         let result = if prefix_op < 0xC0 { value & !mask } else { value | mask };
@@ -1521,7 +1525,7 @@ impl GBEmulator {
                             3 => self.regs.e = result,
                             4 => self.regs.h = result,
                             5 => self.regs.l = result,
-                            6 => self.mmu_write8(self.regs.get_hl(), result),
+                            6 => self.cpu_write8(self.regs.get_hl(), result),
                             _ => self.regs.a = result,
                         }
                         if register == 6 { 16 } else { 8 }
@@ -1531,8 +1535,8 @@ impl GBEmulator {
                         self.dump_regs();
                         panic!("Prefix Opcode {:#04X}:{:#04X}:{:#04X} not implemented!", 
                             op,
-                            self.mmu_read8(self.regs.pc.wrapping_sub(1)),
-                            self.mmu_read8(self.regs.pc));
+                            self.cpu_read8(self.regs.pc.wrapping_sub(1)),
+                            self.cpu_read8(self.regs.pc));
                     },
                 };
 
@@ -1660,7 +1664,7 @@ impl GBEmulator {
             },
             0xE0 => { /* LDH (a8), A */
                 let addr = 0xff00 as u16 | self.pc_read8() as u16;
-                self.mmu_write8(addr, self.regs.a);
+                self.cpu_write8(addr, self.regs.a);
                 12
             },
             0xE1 => { /* POP HL */
@@ -1670,7 +1674,7 @@ impl GBEmulator {
             },
             0xE2 => { /* LD (0xff00+c), a */
                 let addr = 0xFF00 | self.regs.c as u16;
-                self.mmu_write8(addr, self.regs.a);
+                self.cpu_write8(addr, self.regs.a);
                 8
             },
             0xE3 => {
@@ -1709,7 +1713,7 @@ impl GBEmulator {
             },
             0xEA => { /* LD (a16), A */
                 let addr = self.pc_read16();
-                self.mmu_write8(addr, self.regs.a);
+                self.cpu_write8(addr, self.regs.a);
                 16
             },
             0xEB => {
@@ -1733,7 +1737,7 @@ impl GBEmulator {
             },
             0xF0 => { /* LDH A, a8 */
                 let addr = 0xff00 as u16 | self.pc_read8() as u16;
-                self.regs.a = self.mmu_read8(addr);
+                self.regs.a = self.cpu_read8(addr);
                 12
             },
             0xF1 => { /* POP AF */
@@ -1743,7 +1747,7 @@ impl GBEmulator {
             },
             0xF2 => { /* LD A, (C) */
                 let addr = 0xFF00 | self.regs.c as u16;
-                self.regs.a = self.mmu_read8(addr);
+                self.regs.a = self.cpu_read8(addr);
                 8
             },
             0xF3 => { /* DI */
@@ -1784,7 +1788,7 @@ impl GBEmulator {
             },
             0xFA => { /* LD A, (a16) */
                 let addr = self.pc_read16();
-                self.regs.a = self.mmu_read8(addr);
+                self.regs.a = self.cpu_read8(addr);
                 16
             },
             0xFB => { /* EI */
@@ -1812,13 +1816,16 @@ impl GBEmulator {
             /*_ => {
                 panic!("Opcode {:#04X}:{:#06X} not implemented! Made it to {} instructions, {} clocks.", 
                     op,
-                    self.mmu_read16(self.regs.pc),
+                    self.cpu_read16(self.regs.pc),
                     self.op_code_count,
                     self.total_clocks);
             },*/
         };
 
-        op_clocks
+        if self.cpu_cycles < op_clocks {
+            self.advance_cycles(op_clocks - self.cpu_cycles);
+        }
+        self.cpu_cycles
     }
 
     fn add_u8(&mut self, value1: u8, value2: u8) -> u8 {
@@ -2071,12 +2078,15 @@ impl GBEmulator {
     } 
 
     pub fn stack_push(&mut self, val: u16) {
-        self.regs.sp = self.regs.sp.wrapping_sub(2);
-        self.mmu_write16(self.regs.sp, val);
+        self.advance_cycles(4);
+        self.regs.sp = self.regs.sp.wrapping_sub(1);
+        self.cpu_write8(self.regs.sp, (val >> 8) as u8);
+        self.regs.sp = self.regs.sp.wrapping_sub(1);
+        self.cpu_write8(self.regs.sp, val as u8);
     }
 
     pub fn stack_pop(&mut self) -> u16 {
-        let value = self.mmu_read16(self.regs.sp);
+        let value = self.cpu_read16(self.regs.sp);
         self.regs.sp = self.regs.sp.wrapping_add(2);
         value
     }

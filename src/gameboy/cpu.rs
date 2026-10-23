@@ -891,7 +891,7 @@ impl GBEmulator {
                     8
                 } else {
                     self.ret();
-                    12
+                    20
                 }
             },
             0xC1 => { /* POP BC */
@@ -928,7 +928,7 @@ impl GBEmulator {
             0xC6 => { /* ADD A, u8 */
                 let value = self.pc_read8();
                 self.regs.a = self.add_u8(self.regs.a, value);
-                4
+                8
             },
             0xC7 => { /* RST 00H */
                 self.stack_push(self.regs.pc);
@@ -1126,11 +1126,11 @@ impl GBEmulator {
                         let mut value = self.mmu_read8(self.regs.get_hl());
                         value = self.sla(value);
                         self.mmu_write8(self.regs.get_hl(), value);
-                        12
+                        16
                     },
                     0x27 => { /* SLA A */
                         self.regs.a = self.sla(self.regs.a);
-                        4
+                        8
                     },
 
                     0x28 => { /* SRA B */
@@ -1161,11 +1161,11 @@ impl GBEmulator {
                         let mut value = self.mmu_read8(self.regs.get_hl());
                         value = self.sra(value);
                         self.mmu_write8(self.regs.get_hl(), value);
-                        12
+                        16
                     },
                     0x2F => { /* SRA A */
                         self.regs.a = self.sra(self.regs.a);
-                        4
+                        8
                     },
 
                     0x30 => { /* SWAP B */
@@ -1196,11 +1196,11 @@ impl GBEmulator {
                         let mut value = self.mmu_read8(self.regs.get_hl());
                         value = self.swap(value);
                         self.mmu_write8(self.regs.get_hl(), value);
-                        12
+                        16
                     },
                     0x37 => { /* SWAP A */
                         self.regs.a = self.swap(self.regs.a);
-                        4
+                        8
                     },
                     0x38 => { /* SRL B */
                         self.regs.b = self.srl(self.regs.b);
@@ -1230,11 +1230,11 @@ impl GBEmulator {
                         let mut value = self.mmu_read8(self.regs.get_hl());
                         value = self.srl(value);
                         self.mmu_write8(self.regs.get_hl(), value);
-                        12
+                        16
                     },
                     0x3F => { /* SRL A */
                         self.regs.a = self.srl(self.regs.a);
-                        4
+                        8
                     },
                     0x40 => { /* BIT 0, B */
                         self.bit(self.regs.b, 0);
@@ -1536,7 +1536,7 @@ impl GBEmulator {
                     },
                 };
 
-                4 + prefix_op_clocks
+                prefix_op_clocks
             }
             0xCC => { /*  CALL Z, a16  */
                 let addr = self.pc_read16();

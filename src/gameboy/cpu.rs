@@ -2004,7 +2004,7 @@ impl GBEmulator {
 
     fn srl(&mut self, value: u8) -> u8 {
         self.regs.flags.carry = value & 0x1 != 0;
-        let result = (value & 0x7f) >> 1;
+        let result = value >> 1;
         self.regs.flags.negative = false;
         self.regs.flags.half_carry = false;
         self.regs.flags.zero = result == 0;

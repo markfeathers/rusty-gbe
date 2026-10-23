@@ -31,6 +31,7 @@ pub struct GBEmulator {
     stopped: bool,
     halted: bool,
     interrupts_en: bool,
+    divider: u16,
     pub frame_hz: u32,
     gpu_frame_cycles: u32,
     pub framebuffer: [u8; 160*144*4], /* RGB for each pixel */
@@ -48,6 +49,7 @@ impl GBEmulator {
             stopped: false,
             halted: false,
             interrupts_en: false,
+            divider: 0,
             frame_hz: 60,
             gpu_frame_cycles: 456,
             framebuffer: [0; 160*144*4],

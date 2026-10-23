@@ -62,7 +62,10 @@ impl GBEmulator {
             0xFEA0 ..= 0xFEFF => {  },
             /* IO Ports */
             0xFF00 ..= 0xFF03 => { self.mem[addr] = value },
-            0xFF04            => { self.mem[addr] = 0 },
+            0xFF04            => {
+                self.divider = 0;
+                self.mem[addr] = 0;
+            },
             0xFF05 ..= 0xFF45 => { self.mem[addr] = value },
             0xFF46            => { self.dma_transfer(value) },
             0xFF47 ..= 0xFF4F => { self.mem[addr] = value },

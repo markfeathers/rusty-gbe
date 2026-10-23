@@ -46,6 +46,7 @@ pub struct GBEmulator {
 }
 
 impl GBEmulator {
+    /// Select Color hardware behavior; the caller still supplies the appropriate boot ROM.
     pub fn new_cgb(bios: Vec<u8>, rom: Vec<u8>) -> GBEmulator {
         let mut gb = Self::new(bios, rom);
         gb.cgb_mode = true;

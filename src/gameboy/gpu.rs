@@ -185,7 +185,6 @@ impl GBEmulator {
 
     fn set_lcd_stat(&mut self) {
         let mut lcd_status = self.mmu_read8(STAT);
-        let lcdc = self.mmu_read8(LCDC);
         let current_mode = lcd_status & 0x3;
         let ly = self.mmu_read8(LY);
 

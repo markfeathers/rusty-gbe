@@ -58,7 +58,7 @@ fn main() {
     };
 
     loop {
-        let cycles = gb.cpu_run_op();
+        gb.cpu_run_op();
         gb.handle_irqs();
         /*if gb.regs.pc == 0x8E {
             break;

@@ -2,6 +2,7 @@ use std::io;
 use super::GBEmulator;
 
 impl GBEmulator {
+    /// Execute an instruction and advance the timers, APU, and LCD with its bus cycles.
     pub fn cpu_run_op(&mut self) -> u32 {
         self.cpu_cycles = 0;
         if self.halted {
@@ -1540,14 +1541,6 @@ impl GBEmulator {
                             _ => self.regs.a = result,
                         }
                         if register == 6 { 16 } else { 8 }
-                    },
-                    
-                    _ => {
-                        self.dump_regs();
-                        panic!("Prefix Opcode {:#04X}:{:#04X}:{:#04X} not implemented!", 
-                            op,
-                            self.cpu_read8(self.regs.pc.wrapping_sub(1)),
-                            self.cpu_read8(self.regs.pc));
                     },
                 };
 

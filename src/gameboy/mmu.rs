@@ -30,6 +30,7 @@ impl GBEmulator {
             /* Reserved, does nothing */
             0xFEA0 ..= 0xFEFF => { 0x0 },
             /* IO Ports */
+            0xFF0F => self.mem[addr] | 0xE0,
             0xFF00 ..= 0xFF7F => { self.mem[addr] },
             /* High RAM (HRAM) */
             0xFF80 ..= 0xFFFE => { self.mem[addr] },
@@ -123,7 +124,11 @@ impl GBEmulator {
 
     pub fn pc_read8(&mut self) -> u8 {
         let val = self.cpu_read8(self.regs.pc);
-        self.regs.pc = self.regs.pc.wrapping_add(1);
+        if self.halt_bug {
+            self.halt_bug = false;
+        } else {
+            self.regs.pc = self.regs.pc.wrapping_add(1);
+        }
         val
     }
 

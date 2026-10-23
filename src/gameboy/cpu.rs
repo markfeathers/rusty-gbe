@@ -586,7 +586,11 @@ impl GBEmulator {
                 8
             },
             0x76 => { /* HALT */
-                self.halted = true;
+                if !self.interrupts_en && self.mmu_read8(0xFFFF) & self.mmu_read8(0xFF0F) & 0x1F != 0 {
+                    self.halt_bug = true;
+                } else {
+                    self.halted = true;
+                }
                 4
             },
             0x77 => { /* LD (HL), A */
@@ -1752,6 +1756,7 @@ impl GBEmulator {
             },
             0xF3 => { /* DI */
                 self.interrupts_en = false;
+                self.ime_delay = 0;
                 4
             },
             0xF4 => {
@@ -1792,7 +1797,9 @@ impl GBEmulator {
                 16
             },
             0xFB => { /* EI */
-                self.interrupts_en = true;
+                if self.ime_delay == 0 {
+                    self.ime_delay = 2;
+                }
                 4
             },
             0xFC => {
@@ -1824,6 +1831,12 @@ impl GBEmulator {
 
         if self.cpu_cycles < op_clocks {
             self.advance_cycles(op_clocks - self.cpu_cycles);
+        }
+        if self.ime_delay > 0 {
+            self.ime_delay -= 1;
+            if self.ime_delay == 0 {
+                self.interrupts_en = true;
+            }
         }
         self.cpu_cycles
     }

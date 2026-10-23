@@ -124,6 +124,7 @@ impl GBEmulator {
             },
             0x17 => { /* RLA */
                 self.regs.a = self.rotate_left_carry(self.regs.a);
+                self.regs.flags.zero = false;
                 4
             },
             0x18 => { /* JR i8 */
@@ -315,6 +316,8 @@ impl GBEmulator {
                 12
             },
             0x37 => { /* SCF */
+                self.regs.flags.negative = false;
+                self.regs.flags.half_carry = false;
                 self.regs.flags.carry = true;
                 4
             },
@@ -356,6 +359,8 @@ impl GBEmulator {
                 8
             },
             0x3F => { /* CCF */
+                self.regs.flags.negative = false;
+                self.regs.flags.half_carry = false;
                 self.regs.flags.carry = !self.regs.flags.carry;
                 4
             },
@@ -721,31 +726,32 @@ impl GBEmulator {
                 4
             },
             0x99 => { /* SBC A, C */
-                self.regs.a = self.sbc(self.regs.b);
+                self.regs.a = self.sbc(self.regs.c);
                 4
             },
             0x9A => { /* SBC A, D */
-                self.regs.a = self.sbc(self.regs.b);
+                self.regs.a = self.sbc(self.regs.d);
                 4
             },
             0x9B => { /* SBC A, E */
-                self.regs.a = self.sbc(self.regs.b);
+                self.regs.a = self.sbc(self.regs.e);
                 4
             },
             0x9C => { /* SBC A, H */
-                self.regs.a = self.sbc(self.regs.b);
+                self.regs.a = self.sbc(self.regs.h);
                 4
             },
             0x9D => { /* SBC A, L */
-                self.regs.a = self.sbc(self.regs.b);
+                self.regs.a = self.sbc(self.regs.l);
                 4
             },
             0x9E => { /* SBC A, (HL) */
-                self.regs.a = self.sbc(self.regs.b);
+                let value = self.mmu_read8(self.regs.get_hl());
+                self.regs.a = self.sbc(value);
                 8
             },
             0x9F => { /* SBC A, A */
-                self.regs.a = self.sbc(self.regs.b);
+                self.regs.a = self.sbc(self.regs.a);
                 4
             },
             0xA0 => { /* AND B */
@@ -877,7 +883,7 @@ impl GBEmulator {
                 8
             },
             0xBF => { /* CP A */
-                self.regs.a = self.sub(self.regs.a);
+                self.sub(self.regs.a);
                 4
             },
             0xC0 => { /* RET NZ */
@@ -2092,7 +2098,7 @@ impl GBEmulator {
 
     fn sra(&mut self, value: u8) -> u8 {
         self.regs.flags.carry = value & 0x1 != 0;
-        let result = value >> 1;
+        let result = (value >> 1) | (value & 0x80);
         self.regs.flags.negative = false;
         self.regs.flags.half_carry = false;
         self.regs.flags.zero = result == 0;
@@ -2127,7 +2133,7 @@ impl GBEmulator {
         if carry {
             result |= 0x1;
         }
-        self.regs.flags.zero = value == 0;
+        self.regs.flags.zero = result == 0;
         self.regs.flags.negative = false;
         self.regs.flags.half_carry = false;
         result
@@ -2142,7 +2148,7 @@ impl GBEmulator {
         if carry {
             result |= 0x80;
         }
-        self.regs.flags.zero = value == 0;
+        self.regs.flags.zero = result == 0;
         self.regs.flags.negative = false;
         self.regs.flags.half_carry = false;
         result
@@ -2152,7 +2158,7 @@ impl GBEmulator {
     fn rotate_right(&mut self, value: u8) -> u8 {
         let result = value.rotate_right(1);
 
-        self.regs.flags.zero = value == 0;
+        self.regs.flags.zero = result == 0;
         self.regs.flags.half_carry = false;
         self.regs.flags.carry = value & 0x1 != 0;
         self.regs.flags.negative = false;
@@ -2164,7 +2170,7 @@ impl GBEmulator {
     fn rotate_left(&mut self, value: u8) -> u8 {
         let result = value.rotate_left(1);
 
-        self.regs.flags.zero = value == 0;
+        self.regs.flags.zero = result == 0;
         self.regs.flags.half_carry = false;
         self.regs.flags.carry = value & (1 << 7) != 0;
         self.regs.flags.negative = false;

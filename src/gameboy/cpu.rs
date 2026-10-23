@@ -1500,145 +1500,31 @@ impl GBEmulator {
                         self.bit(self.regs.a, 7);
                         8
                     },
-                    0x80 => { /* RES 0, B */
-                        self.regs.b  &= !(1 << 0);
-                        8
-                    },
-                    0x81 => { /* RES 0, C */
-                        self.regs.c &= !(1 << 0);
-                        8
-                    },
-                    0x82 => { /* RES 0, D */
-                        self.regs.d &= !(1 << 0);
-                        8
-                    },
-                    0x83 => { /* RES 0, E */
-                        self.regs.e &= !(1 << 0);
-                        8
-                    },
-                    0x84 => { /* RES 0, H */
-                        self.regs.h &= !(1 << 0);
-                        8
-                    },
-                    0x85 => { /* RES 0, L */
-                        self.regs.l &= !(1 << 0);
-                        8
-                    },
-                    0x86 => { /* RES 0, (HL) */
-                        let addr = self.regs.get_hl();
-                        let mut value = self.mmu_read8(addr);
-                        value &= !(1 << 0);
-                        self.mmu_write8(addr, value);
-                        16
-                    },
-                    0x87 => { /* RES 0, A */
-                        self.regs.a &= !(1 << 0);
-                        8
-                    },
-                    0x88 => { /* RES 1, B */
-                        self.regs.b &= !(1 << 1);
-                        8
-                    },
-                    0x89 => { /* RES 1, C */
-                        self.regs.c &= !(1 << 1);
-                        8
-                    },
-                    0x8a => { /* RES 1, D */
-                        self.regs.d &= !(1 << 1);
-                        8
-                    },
-                    0x8b => { /* RES 1, E */
-                        self.regs.e &= !(1 << 1);
-                        8
-                    },
-                    0x8c => { /* RES 1, H */
-                        self.regs.h &= !(1 << 1);
-                        8
-                    },
-                    0x8d => { /* RES 1, L */
-                        self.regs.l &= !(1 << 1);
-                        8
-                    },
-                    0x8e => { /* RES 1, (HL) */
-                        let addr = self.regs.get_hl();
-                        let mut value = self.mmu_read8(addr);
-                        value &= !(1 << 1);
-                        self.mmu_write8(addr, value);
-                        16
-                    },
-                    0x8f => { /* RES 1, A */
-                        self.regs.l &= !(1 << 1);
-                        8
-                    },
-                    0x90 => { /* RES 2, B */
-                        self.regs.b  &= !(1 << 2);
-                        8
-                    },
-                    0x91 => { /* RES 2, C */
-                        self.regs.c &= !(1 << 2);
-                        8
-                    },
-                    0x92 => { /* RES 2, D */
-                        self.regs.d &= !(1 << 2);
-                        8
-                    },
-                    0x93 => { /* RES 2, E */
-                        self.regs.e &= !(1 << 2);
-                        8
-                    },
-                    0x94 => { /* RES 2, H */
-                        self.regs.h &= !(1 << 2);
-                        8
-                    },
-                    0x95 => { /* RES 2, L */
-                        self.regs.l &= !(1 << 2);
-                        8
-                    },
-                    0x96 => { /* RES 2, (HL) */
-                        let addr = self.regs.get_hl();
-                        let mut value = self.mmu_read8(addr);
-                        value &= !(1 << 2);
-                        self.mmu_write8(addr, value);
-                        16
-                    },
-                    0x97 => { /* RES 2, A */
-                        self.regs.a &= !(1 << 2);
-                        8
-                    },
-                    0x98 => { /* RES 3, B */
-                        self.regs.b &= !(1 << 3);
-                        8
-                    },
-                    0x99 => { /* RES 3, C */
-                        self.regs.c &= !(1 << 3);
-                        8
-                    },
-                    0x9a => { /* RES 3, D */
-                        self.regs.d &= !(1 << 3);
-                        8
-                    },
-                    0x9b => { /* RES 3, E */
-                        self.regs.e &= !(1 << 3);
-                        8
-                    },
-                    0x9c => { /* RES 3, H */
-                        self.regs.h &= !(1 << 3);
-                        8
-                    },
-                    0x9d => { /* RES 3, L */
-                        self.regs.l &= !(1 << 3);
-                        8
-                    },
-                    0x9e => { /* RES 3, (HL) */
-                        let addr = self.regs.get_hl();
-                        let mut value = self.mmu_read8(addr);
-                        value &= !(1 << 3);
-                        self.mmu_write8(addr, value);
-                        16
-                    },
-                    0x9f => { /* RES 3, A */
-                        self.regs.l &= !(1 << 3);
-                        8
+                    0x80..=0xFF => { /* RES / SET bit, r8 */
+                        let register = prefix_op & 7;
+                        let mask = 1 << ((prefix_op >> 3) & 7);
+                        let value = match register {
+                            0 => self.regs.b,
+                            1 => self.regs.c,
+                            2 => self.regs.d,
+                            3 => self.regs.e,
+                            4 => self.regs.h,
+                            5 => self.regs.l,
+                            6 => self.mmu_read8(self.regs.get_hl()),
+                            _ => self.regs.a,
+                        };
+                        let result = if prefix_op < 0xC0 { value & !mask } else { value | mask };
+                        match register {
+                            0 => self.regs.b = result,
+                            1 => self.regs.c = result,
+                            2 => self.regs.d = result,
+                            3 => self.regs.e = result,
+                            4 => self.regs.h = result,
+                            5 => self.regs.l = result,
+                            6 => self.mmu_write8(self.regs.get_hl(), result),
+                            _ => self.regs.a = result,
+                        }
+                        if register == 6 { 16 } else { 8 }
                     },
                     
                     _ => {

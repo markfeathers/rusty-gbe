@@ -1800,12 +1800,13 @@ impl GBEmulator {
                 16
             },
             0xF8 => { /* LD HL, SP + r8 */
-                let value = self.pc_read8() as i8;
-                if value.is_negative() {
-                    self.regs.sp = self.sub_u16(self.regs.sp, value.abs() as u16);
-                } else {
-                    self.regs.sp = self.add_u16(self.regs.sp, value as u16);
-                };
+                let value = self.pc_read8();
+                let sp = self.regs.sp;
+                self.regs.set_hl(sp.wrapping_add(value as i8 as i16 as u16));
+                self.regs.flags.zero = false;
+                self.regs.flags.negative = false;
+                self.regs.flags.half_carry = (sp & 0x0F) + (value as u16 & 0x0F) > 0x0F;
+                self.regs.flags.carry = (sp & 0xFF) + value as u16 > 0xFF;
 
                 12
             },

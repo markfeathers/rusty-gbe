@@ -1863,7 +1863,7 @@ impl GBEmulator {
 
         self.regs.flags.negative = false;
         self.regs.flags.zero = result == 0;
-        self.regs.flags.half_carry = (result & 0x0F) == 0x00;
+        self.regs.flags.half_carry = (value1 & 0x0F) + (value2 & 0x0F) > 0x0F;
         self.regs.flags.carry = overflow;
 
         result

@@ -396,8 +396,8 @@ impl GBEmulator {
                 self.regs.c = self.regs.b;
                 4
             },
-            0x49 => { /* LD C, B */
-                self.regs.c = self.regs.b;
+            0x49 => { /* LD C, C */
+                self.regs.c = self.regs.c;
                 4
             },
             0x4A => { /* LD C, D */
@@ -460,8 +460,8 @@ impl GBEmulator {
                 self.regs.e = self.regs.b;
                 4
             },
-            0x59 => { /* LD E, B */
-                self.regs.e = self.regs.b;
+            0x59 => { /* LD E, C */
+                self.regs.e = self.regs.c;
                 4
             },
             0x5A => { /* LD E, D */
@@ -524,8 +524,8 @@ impl GBEmulator {
                 self.regs.l = self.regs.b;
                 4
             },
-            0x69 => { /* LD L, B */
-                self.regs.l = self.regs.b;
+            0x69 => { /* LD L, C */
+                self.regs.l = self.regs.c;
                 4
             },
             0x6A => { /* LD L, D */

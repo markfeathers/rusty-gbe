@@ -1870,6 +1870,7 @@ impl GBEmulator {
     }
 
     fn adc(&mut self, value: u8) -> u8 {
+        let carry = self.regs.flags.carry as u8;
         let (mut result, mut overflow) = self.regs.a.overflowing_add(value);
         if self.regs.flags.carry {
             let (c_result, c_overflow) = result.overflowing_add(1);
@@ -1881,7 +1882,7 @@ impl GBEmulator {
 
         self.regs.flags.zero = result == 0;
         self.regs.flags.carry = overflow;
-        self.regs.flags.half_carry = (result & 0x0F) == 0x00;
+        self.regs.flags.half_carry = (self.regs.a & 0x0F) + (value & 0x0F) + carry > 0x0F;
         self.regs.flags.negative = false;
 
         result

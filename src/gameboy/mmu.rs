@@ -14,7 +14,10 @@ impl GBEmulator {
             },
             0x100    ..= 0x3FFF => self.rom[addr],
             /* Cartridge, selectable bank */
-            0x4000 ..= 0x7FFF => { self.rom[addr] },
+            0x4000 ..= 0x7FFF => {
+                let bank = self.rom_bank as usize;
+                self.rom[(bank * 0x4000 + addr - 0x4000) % self.rom.len()]
+            },
             /* 8 KiB VRAM, switchable bank 0/1 */
             0x8000 ..= 0x9FFF => { self.mem[addr] },
             /* 8 KiB External RAM, in catridge with switchable banks */
@@ -44,7 +47,12 @@ impl GBEmulator {
         let addr = addr as usize;
         match addr {
             /* Cartridge, fixed bank 00 */
-            0x0    ..= 0x3FFF => {  },
+            0x0    ..= 0x1FFF => {  },
+            0x2000 ..= 0x3FFF => {
+                if matches!(self.rom[0x147], 0x01..=0x03) {
+                    self.rom_bank = (value & 0x1F).max(1);
+                }
+            },
             /* Cartridge, selectable bank */
             0x4000 ..= 0x7FFF => {  },
             /* 8 KiB VRAM, switchable bank 0/1 */

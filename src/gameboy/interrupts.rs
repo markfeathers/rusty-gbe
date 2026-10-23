@@ -11,6 +11,9 @@ impl GBEmulator {
     }
 
     pub fn handle_irqs(&mut self) {
+        if self.mmu_read8(IF) & self.mmu_read8(IE) & 0x1F != 0 {
+            self.halted = false;
+        }
         if !self.interrupts_en {
             return;
         }

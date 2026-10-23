@@ -879,7 +879,7 @@ impl GBEmulator {
             },
             0xBE => { /* CP (HL) */
                 let value = self.mmu_read8(self.regs.get_hl());
-                self.regs.a = self.sub(value);
+                self.sub(value);
                 8
             },
             0xBF => { /* CP A */

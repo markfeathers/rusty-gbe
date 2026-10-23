@@ -10,6 +10,7 @@ impl GBEmulator {
         let tac = self.mem[TAC];
         let bit = [9, 3, 5, 7][(tac & 3) as usize];
         for _ in 0..cycles {
+            self.apu_tick();
             let previous = self.divider;
             self.divider = self.divider.wrapping_add(1);
             self.mem[DIV] = (self.divider >> 8) as u8;

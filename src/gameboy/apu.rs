@@ -11,6 +11,9 @@ pub(super) struct Apu {
     sweep_timer: u8,
     sweep_enabled: bool,
     sweep_negated: bool,
+    wave_timer: u16,
+    wave_position: u8,
+    wave_access: u8,
 }
 
 impl GBEmulator {
@@ -18,6 +21,19 @@ impl GBEmulator {
         if self.apu.length[channel] > 0 {
             self.apu.length[channel] -= 1;
             if self.apu.length[channel] == 0 { self.apu.enabled[channel] = false; }
+        }
+    }
+
+    pub(super) fn apu_tick(&mut self) {
+        self.apu.wave_access = self.apu.wave_access.saturating_sub(1);
+        if self.apu.powered && self.apu.enabled[2] {
+            self.apu.wave_timer = self.apu.wave_timer.saturating_sub(1);
+            if self.apu.wave_timer == 0 {
+                let frequency = self.mem[0xFF1D] as u16 | ((self.mem[0xFF1E] as u16 & 7) << 8);
+                self.apu.wave_timer = (2048 - frequency) * 2;
+                self.apu.wave_position = (self.apu.wave_position + 1) & 31;
+                self.apu.wave_access = 2;
+            }
         }
     }
 
@@ -73,6 +89,9 @@ impl GBEmulator {
             value
         } else if addr < 0xFF30 {
             self.mem[addr] | MASKS[addr - 0xFF10]
+        } else if self.apu.enabled[2] {
+            if self.apu.wave_access == 0 { 0xFF }
+            else { self.mem[0xFF30 + self.apu.wave_position as usize / 2] }
         } else {
             self.mem[addr]
         }
@@ -80,7 +99,11 @@ impl GBEmulator {
 
     pub(super) fn apu_write8(&mut self, addr: usize, value: u8) {
         if addr >= 0xFF30 {
-            self.mem[addr] = value;
+            if !self.apu.enabled[2] {
+                self.mem[addr] = value;
+            } else if self.apu.wave_access != 0 {
+                self.mem[0xFF30 + self.apu.wave_position as usize / 2] = value;
+            }
             return;
         }
         if addr == 0xFF26 {
@@ -134,6 +157,12 @@ impl GBEmulator {
                 let dac_addr = [0xFF12, 0xFF17, 0xFF1A, 0xFF21][channel];
                 let mask = if channel == 2 { 0x80 } else { 0xF8 };
                 self.apu.enabled[channel] = self.mem[dac_addr] & mask != 0;
+                if channel == 2 {
+                    let frequency = self.mem[0xFF1D] as u16 | ((value as u16 & 7) << 8);
+                    self.apu.wave_timer = (2048 - frequency) * 2 + 6;
+                    self.apu.wave_position = 0;
+                    self.apu.wave_access = 0;
+                }
                 if channel == 0 {
                     self.apu.sweep_frequency = self.mem[0xFF13] as u16 | ((value as u16 & 7) << 8);
                     let period = (self.mem[0xFF10] >> 4) & 7;

@@ -943,8 +943,9 @@ impl GBEmulator {
                 16
             }
             0xCA => { /* JP Z, u16 */
+                let addr = self.pc_read16();
                 if self.regs.flags.zero {
-                    self.regs.pc = self.mmu_read16(self.regs.pc);
+                    self.regs.pc = addr;
                     16
                 } else {
                     12

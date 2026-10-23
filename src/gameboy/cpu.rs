@@ -248,7 +248,7 @@ impl GBEmulator {
             },
             0x2A => { /* LD A, (HL+) */
                 let addr = self.regs.get_hl();
-                self.regs.a = self.cpu_read8(addr);
+                self.regs.a = self.cpu_read8_increment(addr);
                 self.regs.set_hl(addr.wrapping_add(1));
                 8
             },
@@ -341,7 +341,7 @@ impl GBEmulator {
             },
             0x3A => { /* LD A, (HL-) */
                 let addr = self.regs.get_hl();
-                self.regs.a = self.cpu_read8(addr);
+                self.regs.a = self.cpu_read8_increment(addr);
                 self.regs.set_hl(addr.wrapping_sub(1));
                 8
             },
@@ -1901,6 +1901,8 @@ impl GBEmulator {
     }
 
     fn increment_u16(&mut self, value: u16) -> u16 {
+        self.advance_cycles(4);
+        self.corrupt_oam(value, false, true);
         value.wrapping_add(1)
     }
 
@@ -1914,6 +1916,8 @@ impl GBEmulator {
     }
 
     fn decrement_u16(&mut self, value: u16) -> u16 {
+        self.advance_cycles(4);
+        self.corrupt_oam(value, false, true);
         value.wrapping_sub(1)
     }
 
@@ -2092,6 +2096,7 @@ impl GBEmulator {
 
     pub fn stack_push(&mut self, val: u16) {
         self.advance_cycles(4);
+        self.corrupt_oam(self.regs.sp, false, true);
         self.regs.sp = self.regs.sp.wrapping_sub(1);
         self.cpu_write8(self.regs.sp, (val >> 8) as u8);
         self.regs.sp = self.regs.sp.wrapping_sub(1);
@@ -2099,8 +2104,11 @@ impl GBEmulator {
     }
 
     pub fn stack_pop(&mut self) -> u16 {
-        let value = self.cpu_read16(self.regs.sp);
-        self.regs.sp = self.regs.sp.wrapping_add(2);
+        let low = self.cpu_read8_increment(self.regs.sp) as u16;
+        self.regs.sp = self.regs.sp.wrapping_add(1);
+        let high = self.cpu_read8(self.regs.sp) as u16;
+        self.regs.sp = self.regs.sp.wrapping_add(1);
+        let value = low | (high << 8);
         value
     }
 

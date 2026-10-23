@@ -120,11 +120,19 @@ impl GBEmulator {
 
     pub(super) fn cpu_read8(&mut self, addr: u16) -> u8 {
         self.advance_cycles(4);
+        self.corrupt_oam(addr, true, false);
+        self.mmu_read8(addr)
+    }
+
+    pub(super) fn cpu_read8_increment(&mut self, addr: u16) -> u8 {
+        self.advance_cycles(4);
+        self.corrupt_oam(addr, true, true);
         self.mmu_read8(addr)
     }
 
     pub(super) fn cpu_write8(&mut self, addr: u16, value: u8) {
         self.advance_cycles(4);
+        self.corrupt_oam(addr, false, false);
         self.mmu_write8(addr, value);
     }
 

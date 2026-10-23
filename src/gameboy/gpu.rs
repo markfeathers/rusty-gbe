@@ -27,6 +27,38 @@ const VBLANK_SCANLINE_MAX: u8   = 153;
 const GPU_CYCLES_PER_FRAME: u32 = 456;
 
 impl GBEmulator {
+    pub(super) fn corrupt_oam(&mut self, addr: u16, read: bool, increment: bool) {
+        if addr & 0xFF00 != 0xFE00 || self.mem[LCDC as usize] & 0x80 == 0
+            || self.mem[LY as usize] >= 144 || self.gpu_frame_cycles <= 376 {
+            return;
+        }
+        let row = ((456 - self.gpu_frame_cycles) / 4) as usize;
+        if row == 0 || row >= 20 { return; }
+        let base = 0xFE00 + row * 8;
+        let word = |mem: &[u8], at: usize| u16::from_le_bytes([mem[at], mem[at + 1]]);
+        if read && increment && row >= 4 && row < 19 {
+            let a = word(&self.mem, base - 16);
+            let b = word(&self.mem, base - 8);
+            let c = word(&self.mem, base);
+            let d = word(&self.mem, base - 4);
+            let value = (b & (a | c | d)) | (a & c & d);
+            self.mem[base - 8..base - 6].copy_from_slice(&value.to_le_bytes());
+            for offset in 0..8 {
+                let byte = self.mem[base - 8 + offset];
+                self.mem[base + offset] = byte;
+                self.mem[base - 16 + offset] = byte;
+            }
+        }
+        let a = word(&self.mem, base);
+        let b = word(&self.mem, base - 8);
+        let c = word(&self.mem, base - 4);
+        let value = if read { b | (a & c) } else { ((a ^ c) & (b ^ c)) ^ c };
+        self.mem[base..base + 2].copy_from_slice(&value.to_le_bytes());
+        for offset in 2..8 {
+            self.mem[base + offset] = self.mem[base - 8 + offset];
+        }
+    }
+
     pub fn draw_scanline(&mut self) {
         let lcdc = self.mmu_read8(LCDC);
 

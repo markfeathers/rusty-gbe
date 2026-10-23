@@ -10,11 +10,12 @@ impl GBEmulator {
         let tac = self.mem[TAC];
         let bit = [9, 3, 5, 7][(tac & 3) as usize];
         for _ in 0..cycles {
-            self.apu_tick();
+            if !self.double_speed || self.divider & 1 == 0 { self.apu_tick(); }
             let previous = self.divider;
             self.divider = self.divider.wrapping_add(1);
             self.mem[DIV] = (self.divider >> 8) as u8;
-            if previous & 0x1000 != 0 && self.divider & 0x1000 == 0 {
+            let apu_bit = if self.double_speed { 0x2000 } else { 0x1000 };
+            if previous & apu_bit != 0 && self.divider & apu_bit == 0 {
                 self.apu_frame_tick();
             }
             // TIMA advances on a falling edge of the selected divider bit.

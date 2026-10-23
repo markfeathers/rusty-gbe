@@ -37,6 +37,8 @@ pub struct GBEmulator {
     interrupts_en: bool,
     divider: u16,
     cpu_cycles: u32,
+    cgb_mode: bool,
+    double_speed: bool,
     apu: apu::Apu,
     pub frame_hz: u32,
     gpu_frame_cycles: u32,
@@ -44,6 +46,12 @@ pub struct GBEmulator {
 }
 
 impl GBEmulator {
+    pub fn new_cgb(bios: Vec<u8>, rom: Vec<u8>) -> GBEmulator {
+        let mut gb = Self::new(bios, rom);
+        gb.cgb_mode = true;
+        gb
+    }
+
     pub fn new(bios: Vec<u8>, rom: Vec<u8>)  -> GBEmulator {
         let mut gb = GBEmulator {
             mem: [0; 0x10000],
@@ -60,6 +68,8 @@ impl GBEmulator {
             interrupts_en: false,
             divider: 0,
             cpu_cycles: 0,
+            cgb_mode: false,
+            double_speed: false,
             apu: apu::Apu::default(),
             frame_hz: 60,
             gpu_frame_cycles: 456,

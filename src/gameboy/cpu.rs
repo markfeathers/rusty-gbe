@@ -95,7 +95,14 @@ impl GBEmulator {
                 4
             },
             0x10 => { /* STOP */
-                self.stopped = true;
+                self.regs.pc = self.regs.pc.wrapping_add(1);
+                if self.cgb_mode && self.mem[0xFF4D] & 1 != 0 {
+                    self.double_speed = !self.double_speed;
+                    self.mem[0xFF4D] = 0;
+                    self.divider = 0;
+                } else {
+                    self.stopped = true;
+                }
                 4
             },
             0x11 => { /* LD DE, D16 */

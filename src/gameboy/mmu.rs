@@ -35,6 +35,7 @@ impl GBEmulator {
             /* IO Ports */
             0xFF0F => self.mem[addr] | 0xE0,
             0xFF10 ..= 0xFF3F => self.apu_read8(addr),
+            0xFF4D => if self.cgb_mode { 0x7E | ((self.double_speed as u8) << 7) | (self.mem[addr] & 1) } else { 0xFF },
             0xFF00 ..= 0xFF7F => { self.mem[addr] },
             /* High RAM (HRAM) */
             0xFF80 ..= 0xFFFE => { self.mem[addr] },
@@ -117,7 +118,7 @@ impl GBEmulator {
     pub(super) fn advance_cycles(&mut self, cycles: u32) {
         self.cpu_cycles += cycles;
         self.timers_run(cycles);
-        self.gpu_run(cycles);
+        self.gpu_run(if self.double_speed { cycles / 2 } else { cycles });
     }
 
     pub(super) fn cpu_read8(&mut self, addr: u16) -> u8 {

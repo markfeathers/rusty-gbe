@@ -28,7 +28,7 @@ const GPU_CYCLES_PER_FRAME: u32 = 456;
 
 impl GBEmulator {
     pub(super) fn corrupt_oam(&mut self, addr: u16, read: bool, increment: bool) {
-        if addr & 0xFF00 != 0xFE00 || self.mem[LCDC as usize] & 0x80 == 0
+        if self.cgb_mode || addr & 0xFF00 != 0xFE00 || self.mem[LCDC as usize] & 0x80 == 0
             || self.mem[LY as usize] >= 144 || self.gpu_frame_cycles <= 376 {
             return;
         }

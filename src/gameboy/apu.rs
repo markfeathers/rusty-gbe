@@ -90,7 +90,7 @@ impl GBEmulator {
         } else if addr < 0xFF30 {
             self.mem[addr] | MASKS[addr - 0xFF10]
         } else if self.apu.enabled[2] {
-            if self.apu.wave_access == 0 { 0xFF }
+            if !self.cgb_mode && self.apu.wave_access == 0 { 0xFF }
             else { self.mem[0xFF30 + self.apu.wave_position as usize / 2] }
         } else {
             self.mem[addr]
@@ -101,7 +101,7 @@ impl GBEmulator {
         if addr >= 0xFF30 {
             if !self.apu.enabled[2] {
                 self.mem[addr] = value;
-            } else if self.apu.wave_access != 0 {
+            } else if self.cgb_mode || self.apu.wave_access != 0 {
                 self.mem[0xFF30 + self.apu.wave_position as usize / 2] = value;
             }
             return;
@@ -115,6 +115,7 @@ impl GBEmulator {
             }
             if !self.apu.powered && powered {
                 self.apu.step = 0;
+                if self.cgb_mode { self.apu.length = [0; 4]; }
             }
             self.apu.powered = powered;
             return;
@@ -123,7 +124,7 @@ impl GBEmulator {
             0xFF11 => Some(0), 0xFF16 => Some(1),
             0xFF1B => Some(2), 0xFF20 => Some(3), _ => None,
         };
-        if let Some(channel) = length_channel {
+        if let Some(channel) = length_channel.filter(|_| self.apu.powered || !self.cgb_mode) {
             let maximum = if channel == 2 { 256 } else { 64 };
             self.apu.length[channel] = maximum - (value as u16 & (maximum - 1));
         }
@@ -154,7 +155,7 @@ impl GBEmulator {
             }
             self.apu.length_enabled[channel] = enabled;
             if value & 0x80 != 0 {
-                if channel == 2 && self.apu.enabled[2] && self.apu.wave_timer == 2 {
+                if channel == 2 && !self.cgb_mode && self.apu.enabled[2] && self.apu.wave_timer == 2 {
                     let offset = ((self.apu.wave_position as usize + 1) / 2) & 15;
                     if offset < 4 {
                         self.mem[0xFF30] = self.mem[0xFF30 + offset];

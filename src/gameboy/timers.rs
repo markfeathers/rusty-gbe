@@ -13,6 +13,9 @@ impl GBEmulator {
             let previous = self.divider;
             self.divider = self.divider.wrapping_add(1);
             self.mem[DIV] = (self.divider >> 8) as u8;
+            if previous & 0x1000 != 0 && self.divider & 0x1000 == 0 {
+                self.apu_frame_tick();
+            }
             // TIMA advances on a falling edge of the selected divider bit.
             if tac & 4 != 0 && previous & (1 << bit) != 0
                 && self.divider & (1 << bit) == 0

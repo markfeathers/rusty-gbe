@@ -10,6 +10,23 @@ pub(super) struct Apu {
 }
 
 impl GBEmulator {
+    fn apu_clock_length(&mut self, channel: usize) {
+        if self.apu.length[channel] > 0 {
+            self.apu.length[channel] -= 1;
+            if self.apu.length[channel] == 0 { self.apu.enabled[channel] = false; }
+        }
+    }
+
+    pub(super) fn apu_frame_tick(&mut self) {
+        if !self.apu.powered { return; }
+        if self.apu.step & 1 == 0 {
+            for channel in 0..4 {
+                if self.apu.length_enabled[channel] { self.apu_clock_length(channel); }
+            }
+        }
+        self.apu.step = (self.apu.step + 1) & 7;
+    }
+
     pub(super) fn apu_read8(&self, addr: usize) -> u8 {
         const MASKS: [u8; 32] = [
             0x80, 0x3F, 0, 0xFF, 0xBF, 0xFF, 0x3F, 0, 0xFF, 0xBF,
@@ -47,9 +64,46 @@ impl GBEmulator {
             self.apu.powered = powered;
             return;
         }
+        let length_channel = match addr {
+            0xFF11 => Some(0), 0xFF16 => Some(1),
+            0xFF1B => Some(2), 0xFF20 => Some(3), _ => None,
+        };
+        if let Some(channel) = length_channel {
+            let maximum = if channel == 2 { 256 } else { 64 };
+            self.apu.length[channel] = maximum - (value as u16 & (maximum - 1));
+        }
         if !self.apu.powered {
             return;
         }
         self.mem[addr] = value;
+        let dac_channel = match addr {
+            0xFF12 => Some(0), 0xFF17 => Some(1),
+            0xFF1A => Some(2), 0xFF21 => Some(3), _ => None,
+        };
+        if let Some(channel) = dac_channel {
+            let mask = if channel == 2 { 0x80 } else { 0xF8 };
+            if value & mask == 0 { self.apu.enabled[channel] = false; }
+        }
+        let trigger_channel = match addr {
+            0xFF14 => Some(0), 0xFF19 => Some(1),
+            0xFF1E => Some(2), 0xFF23 => Some(3), _ => None,
+        };
+        if let Some(channel) = trigger_channel {
+            let enabled = value & 0x40 != 0;
+            let extra_clock = self.apu.step & 1 != 0;
+            if enabled && !self.apu.length_enabled[channel] && extra_clock {
+                self.apu_clock_length(channel);
+            }
+            self.apu.length_enabled[channel] = enabled;
+            if value & 0x80 != 0 {
+                let dac_addr = [0xFF12, 0xFF17, 0xFF1A, 0xFF21][channel];
+                let mask = if channel == 2 { 0x80 } else { 0xF8 };
+                self.apu.enabled[channel] = self.mem[dac_addr] & mask != 0;
+                if self.apu.length[channel] == 0 {
+                    self.apu.length[channel] = if channel == 2 { 256 } else { 64 };
+                    if enabled && extra_clock { self.apu_clock_length(channel); }
+                }
+            }
+        }
     }
 }
